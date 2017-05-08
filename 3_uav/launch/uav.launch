@@ -1,0 +1,11 @@
+<!-- -->
+<launch>
+    <include file="$(find flea3)/launch/single_node.launch" />
+    <include file="$(find camera_base)/launch/extras.launch" />
+    <include file="$(find qrcode_detect)/launch/qrcode_detect.launch" />
+    <node pkg="uav" type="uav_node" name="uav_node" output="screen"></node>
+    <!--include file="$(find apriltags_ros)/launch/example.launch"/>
+    <include file="$(find apriltags_ros)/launch/example.launch"/-->
+    <!--node pkg="image_view" type="image_view" name="viewer" args="image:=/qrDetectImg" output="screen"></node-->
+
+</launch>

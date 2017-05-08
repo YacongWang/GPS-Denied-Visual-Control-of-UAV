@@ -1,0 +1,9 @@
+<!-- -->
+<launch>
+	<node pkg="qrcode_detect" type="qrcode_detect_node" name="qrcode_detect" output="screen"></node>
+		<!--param name="strSub_pc2" type="string" value="/velodyne32/velodyne_points"/>
+		<param name="strSub_img" type="string" value="/camera/image_color"/>
+		<param name="onlyDrawPointsColor" type="bool" value="false"/>
+		<param name="DistanceThreshold" type="double" value="0.05"/-->
+	
+</launch>

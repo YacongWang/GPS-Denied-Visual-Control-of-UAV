@@ -1,0 +1,19 @@
+<!-- -->
+<launch>
+  <arg name="camera" default="pg_15508342"/>
+  <arg name="image" default="/pg_15508342/image_rect"/>
+  <arg name="output" default="screen"/>
+  <arg name="proc" default="true"/>
+  <arg name="view" default="true"/>
+
+  <!-- Proc -->
+  <node if="$(arg proc)"
+        pkg="image_proc" type="image_proc" name="image_proc" ns="$(arg camera)">
+  </node>
+
+  <!-- View >
+  <node if="$(arg view)"
+  	pkg="image_view" type="image_view" name="viewer" ns="$(arg camera)"
+  	args="image:=$(arg image)" output="$(arg output)">
+  </node-->
+</launch>
