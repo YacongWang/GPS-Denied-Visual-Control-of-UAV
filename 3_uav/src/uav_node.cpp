@@ -33,6 +33,7 @@ struct Parameter
     double scaleY;
     double scaleZ;
     double scaleYaw;
+    double disRange;
 };
 
 Parameter param;
@@ -42,16 +43,38 @@ void Callback(uav::CtrlParamConfig &config, uint32_t level)
     param.scaleY           = config.scaleY;
     param.scaleZ           = config.scaleZ;
     param.scaleYaw         = config.scaleYaw;
+    param.disRange         = config.disRange;
+}
+
+void posRange(double& pos)
+{
+//    double pos = Pos;
+    if(pos > param.disRange)
+        pos = param.disRange;
+    else if(pos < - param.disRange)
+        pos = - param.disRange;
+
+
 }
 
 
-
-void posToAng(double& pos, double& angle)
+void posToAng(double& pos, double& Angle)
 {
-    if(pos > 0)
-        angle = 30;
-    else
-        angle = -30;
+//    double pos = Pos;
+//    Angle = 0;
+//    if(pos > param.disRange)
+//        pos = param.disRange;
+//    else if(pos < - param.disRange)
+//        pos = - param.disRange;
+//    else
+//    {
+    posRange(pos);
+    if(abs(pos)!= param.disRange)
+        Angle = 30*pos/param.disRange;
+    else Angle = 0;
+//    }
+
+
 }
 
 void vPosCallback(const geometry_msgs::PoseArray& msg)
@@ -59,12 +82,14 @@ void vPosCallback(const geometry_msgs::PoseArray& msg)
     if(!msg.poses.empty())
     {
         visionPos_.position.x  = msg.poses[0].position.x;
-        visionPos_.position.y  = msg.poses[0].position.y;
+        visionPos_.position.y  = -msg.poses[0].position.y;
         visionPos_.position.z  = msg.poses[0].position.z;
         posToAng(visionPos_.position.x, visionPos_.orientation.y);
-    //    cout<<"pitch: "<<visionPos_.orientation.y<<endl<<endl;
+//        cout<<"pitch: "<<visionPos_.orientation.y<<endl<<endl;
         posToAng(visionPos_.position.y, visionPos_.orientation.x);
-    //    cout<<"roll: "<<visionPos_.orientation.x<<endl<<endl;
+//        cout<<"roll: "<<visionPos_.orientation.x<<endl<<endl;
+        posRange(visionPos_.position.z);
+//        cout<<"z: "<<visionPos_.position.z<<endl<<endl;
         visionPos_.orientation.z = msg.poses[0].orientation.z;
     //    char message[40];
     //    sprintf(message, "%d %6.4f %6.4f %6.4f",
@@ -258,11 +283,11 @@ int main(int argc, char** argv)
                 cout<<"take off "<<endl<<endl;
                 break;
             case 3:
-                cout<<"visual tracking"<<endl<<endl;
+//                cout<<"visual tracking"<<endl<<endl;
                 drone->attitude_control(0x02, param.scaleX*visionPos_.orientation.x,
                                                param.scaleY*visionPos_.orientation.y,
-                                               param.scaleZ*40,
-                                               param.scaleYaw*visionPos_.orientation.z);
+                                               param.scaleZ*(0.8+visionPos_.position.z ),
+                                               /*0*/param.scaleYaw*visionPos_.orientation.z);
                 usleep(20000);//50Hz
                 break;
             case 4:

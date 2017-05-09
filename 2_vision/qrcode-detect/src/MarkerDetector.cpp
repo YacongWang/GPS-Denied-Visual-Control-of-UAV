@@ -2,7 +2,7 @@
 
 MarkerDetector::MarkerDetector(void)
 {
-	m_minContourLengthAllowed = 100.0f;
+    m_minContourLengthAllowed =  (1280/30)*(1280/30);
 
     m_camMat = (Mat_<float>(3,3) << 818.4754131157803, 0, 642.2226934323369, 0, 820.4894345503285, 468.6612502070024, 0, 0, 1);
     m_distCoeff = (Mat_<float>(4,1) << -0.3925087711797847, 0.1351436575960125, -0.001523285367454869, -0.001720442844741013);
@@ -47,20 +47,20 @@ bool MarkerDetector::findMarkers(const Mat& _frame, vector<Marker>& _detectedMar
 	//cvtColor(_frame, m_imgGray, CV_BGR2GRAY);
 
 	// 转为2值图,自适应的阈值,这个自适应阈值函数好像有问题啊。。。。！！！！！！
-	threshold(_frame, m_imgThreshold, 128, 255, cv::THRESH_BINARY_INV);
- //	imshow("threshold", m_imgThreshold);
-// 	adaptiveThreshold(m_imgGray, m_imgThreshold, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 7, 7);
-// 	imshow("threshold", m_imgThreshold);
+    threshold(_frame, m_imgThreshold, 100, 255, cv::THRESH_BINARY_INV);
+//    imshow("threshold", m_imgThreshold);
+//    adaptiveThreshold(m_imgGray, m_imgThreshold, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 7, 7);
+//    imshow("threshold", m_imgThreshold);
 
 	// 检测边缘
 	findMarkerContours(m_imgThreshold, m_contours, m_imgGray.cols/5);
-// 	vector<Vec4i> hierarchy;
-// 	Mat contourImg = Mat::zeros(_frame.size(), CV_8UC3);
-// 	for(int i=0; i<m_contours.size(); i++)
-// 	{
-// 		drawContours(contourImg, m_contours, i, Scalar(255,255,255), 2, 8, hierarchy, 0, Point());
-// 	}
-// 	imshow("contours", contourImg);
+//    vector<Vec4i> hierarchy;
+//    Mat contourImg = Mat::zeros(_frame.size(), CV_8UC3);
+//    for(int i=0; i<m_contours.size(); i++)
+//    {
+//        drawContours(contourImg, m_contours, i, Scalar(255,255,255), 2, 8, hierarchy, 0, Point());
+//    }
+//    imshow("contours", contourImg);
 
 	// 筛选contours，选择那些又4点围成的contour，得到候选marker
 	findMarkerCandidates(m_contours, _detectedMarkers);
@@ -127,7 +127,7 @@ void MarkerDetector::findMarkerCandidates(const vector<vector<Point> >& _contour
 	for (size_t i=0; i<_contours.size(); i++)
 	{
 		// 得到近似多边形
-		approxPolyDP(_contours[i], approxCurve, double(_contours[i].size())*0.05, true);
+        approxPolyDP(_contours[i], approxCurve, double(_contours[i].size())*0.05, true);
 		// 我们只关心那些4边形的轮廓，因为只有他们才可能是marker
 		if (approxCurve.size() != 4)
 			continue;
@@ -142,9 +142,11 @@ void MarkerDetector::findMarkerCandidates(const vector<vector<Point> >& _contour
 			float distSquared = vecTemp.dot(vecTemp);
 			minDist = std::min(minDist, distSquared);
 		}
+
 		// 如果这个最小边不够长，这个contour不是marker
 		if (minDist > m_minContourLengthAllowed)
 		{
+//            cout<<minDist<<endl;
 			Marker markerTemp;
 			for (int i=0; i<4; i++)
 			{

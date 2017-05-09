@@ -51,34 +51,27 @@ void QrcodeDdetect::img_Callback(const sensor_msgs::ImageConstPtr& img)
                 line(cImg_, markCapture_.m_markers[i].m_points[j], markCapture_.m_markers[i].m_points[(j+1)%sizeNum], Scalar(0,0,255), 10, 8);
             }
             circle(cImg_, markCapture_.m_markers[i].m_points[0], 3, Scalar(0,255,255), 10, 8);//clockwise code the points
-            addpose(markCapture_.m_markers[i].m_rotation, markCapture_.m_markers[i].m_translation);
-
-            char bufTran[50],bufRot[50];
-//            sprintf(bufTran,"x: %5.4f, y: %5.4f, z: %5.4f\nroll: %5.4f, pitch: %5.4f, yaw: %5.4f",
-//                    markerPose_.position.x,markerPose_.position.y,markerPose_.position.z,
-//                    markerPose_.orientation.x,markerPose_.orientation.y,markerPose_.orientation.z);
-            sprintf(bufTran,"x: %5.4f, y: %5.4f, z: %5.4f",
-                    markerPose_.position.x,markerPose_.position.y,markerPose_.position.z);
-            sprintf(bufRot,"roll: %5.4f, pitch: %5.4f, yaw: %5.4f",
-                    markerPose_.orientation.x,markerPose_.orientation.y,markerPose_.orientation.z);
-            putText(cImg_, bufTran, Point(20,img_.rows - 80), cv::FONT_HERSHEY_DUPLEX, 1.5, Scalar(255,0,0), 2);
-//            Point texCentre;
-//            texCentre.x =  markCapture_.m_markers[i].m_points[0].x;
-//            texCentre.y =  markCapture_.m_markers[i].m_points[0].y + 20;
-//            putText(cImg_, bufRot, texCentre, cv::FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(255,0,0), 2);
-            putText(cImg_, bufRot, Point(20,img_.rows - 20), cv::FONT_HERSHEY_DUPLEX, 1.5, Scalar(255,0,0), 2);
-
+            stringstream s;
+            s<<i;
+            putText(cImg_,s.str(),markCapture_.m_markers[i].m_points[0] , cv::FONT_HERSHEY_DUPLEX, 1.5, Scalar(255,0,0), 2);
+//            addpose(markCapture_.m_markers[i].m_rotation, markCapture_.m_markers[i].m_translation);
         }
-
-        //imshow("markerDetector", cImg);
-        //cv::waitKey(5);
-
+        addpose(markCapture_.m_markers[0].m_rotation, markCapture_.m_markers[0].m_translation);
     }
     else
     {
-
+        Vec3f trans(-100,100,100);
+        Vec3f rot(0,-0,-0);
+        addpose(rot,trans);
     }
-     publishMsg();
+    char bufTran[50],bufRot[50];
+    sprintf(bufTran," x: %5.4f,  y: %5.4f,  z: %5.4f",
+            markerPose_.position.x,markerPose_.position.y,markerPose_.position.z);
+    sprintf(bufRot,"roll: %5.4f, pitch: %5.4f, yaw: %5.4f",
+            markerPose_.orientation.x,markerPose_.orientation.y,markerPose_.orientation.z);
+    putText(cImg_, bufTran, Point(20,img_.rows - 80), cv::FONT_HERSHEY_DUPLEX, 1.5, Scalar(255,0,0), 2);
+    putText(cImg_, bufRot, Point(20,img_.rows - 20), cv::FONT_HERSHEY_DUPLEX, 1.5, Scalar(255,0,0), 2);
+    publishMsg();
     //imageCloudPoints_<< imgPoint_.x <<" "<<imgPoint_.y<<endl;
 
 }

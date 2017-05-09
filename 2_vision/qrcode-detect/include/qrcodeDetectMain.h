@@ -13,6 +13,8 @@
 #include <geometry_msgs/PoseArray.h>
 #include <geometry_msgs/Pose.h>
 
+#include <string>
+
 using namespace std;
 using namespace cv;
 
