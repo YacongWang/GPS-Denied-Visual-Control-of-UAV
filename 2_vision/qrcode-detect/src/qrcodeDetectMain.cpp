@@ -60,8 +60,8 @@ void QrcodeDdetect::img_Callback(const sensor_msgs::ImageConstPtr& img)
     }
     else
     {
-        Vec3f trans(-100,100,100);
-        Vec3f rot(0,-0,-0);
+        Vec3f trans(100,-100,100);
+        Vec3f rot(0,0,0);
         addpose(rot,trans);
     }
     char bufTran[50],bufRot[50];

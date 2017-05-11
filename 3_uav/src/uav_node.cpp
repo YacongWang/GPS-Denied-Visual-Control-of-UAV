@@ -11,21 +11,12 @@
 //!opencv
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-//#include <opencv2/imgproc.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 
 using namespace std;
 using namespace DJI::onboardSDK;
 using namespace cv;
-
-cv::Mat gImg;                   //grab image
-int w = 640, h = 600;
-cv::Mat gImgShow = Mat::zeros( h, w, CV_8UC3);
-int main_operate_code = 0;
-int buttonColor = 0;
-std::string winName("UAV");
-geometry_msgs::Pose visionPos_;
 
 struct Parameter
 {
@@ -34,9 +25,27 @@ struct Parameter
     double scaleZ;
     double scaleYaw;
     double disRange;
+    int w;
+    int h;
+};
+
+struct UAV_status
+{
+    int  ui_order;      //1：request control 2：request control 3：request control 4：release control
+    int  btn_color;     //Change button color after cicked
+    int  target_lost_cnt;//Count how many times we have lost the target, if more than 5,then let the uav hold
+    bool target_lost;   // 0: found 1:lost
+
 };
 
 Parameter param;
+UAV_status uavStatus = {0,0,0,0};
+cv::Mat gImg;
+cv::Mat gImgShow = Mat::zeros( 600, 640, CV_8UC3);
+std::string winName("UAV");
+geometry_msgs::Pose visionPos_;
+
+
 void Callback(uav::CtrlParamConfig &config, uint32_t level)
 {
     param.scaleX           = config.scaleX;
@@ -44,43 +53,44 @@ void Callback(uav::CtrlParamConfig &config, uint32_t level)
     param.scaleZ           = config.scaleZ;
     param.scaleYaw         = config.scaleYaw;
     param.disRange         = config.disRange;
+    param.w                = config.w;
+    param.h                = config.h;
 }
 
 void posRange(double& pos)
 {
-//    double pos = Pos;
     if(pos > param.disRange)
         pos = param.disRange;
     else if(pos < - param.disRange)
         pos = - param.disRange;
-
-
 }
 
 
 void posToAng(double& pos, double& Angle)
 {
-//    double pos = Pos;
-//    Angle = 0;
-//    if(pos > param.disRange)
-//        pos = param.disRange;
-//    else if(pos < - param.disRange)
-//        pos = - param.disRange;
-//    else
-//    {
     posRange(pos);
-    if(abs(pos)!= param.disRange)
+//    if(abs(pos)!= param.disRange)
         Angle = 30*pos/param.disRange;
-    else Angle = 0;
-//    }
-
-
+//    else Angle = 0;
 }
 
 void vPosCallback(const geometry_msgs::PoseArray& msg)
 {
     if(!msg.poses.empty())
     {
+        if (uavStatus.target_lost_cnt >= 5 && uavStatus.target_lost == 0)
+        {
+            uavStatus.target_lost = 1;
+            uavStatus.target_lost_cnt = 0;
+            return;
+        }
+        if(msg.poses[0].position.x == -100 && msg.poses[0].position.y == -100 && msg.poses[0].position.z == -100)
+        {
+            uavStatus.target_lost_cnt += 1;
+            return;
+        }
+
+        uavStatus.target_lost == 0;
         visionPos_.position.x  = msg.poses[0].position.x;
         visionPos_.position.y  = -msg.poses[0].position.y;
         visionPos_.position.z  = msg.poses[0].position.z;
@@ -91,16 +101,6 @@ void vPosCallback(const geometry_msgs::PoseArray& msg)
         posRange(visionPos_.position.z);
 //        cout<<"z: "<<visionPos_.position.z<<endl<<endl;
         visionPos_.orientation.z = msg.poses[0].orientation.z;
-    //    char message[40];
-    //    sprintf(message, "%d %6.4f %6.4f %6.4f",
-    //          msg.poses.size(),
-    //          msg.poses[0].position.x,
-    //          msg.poses[0].position.y,
-    //          msg.poses[0].position.z);
-    //    cout<<message<<endl;
-
-    //    node_handle.loginfo(message);
-
     }
 }
 
@@ -108,18 +108,18 @@ void cavansInit()
 {
      rectangle( gImgShow,
          Point( 0, 520 ),
-         Point( w, h),
+         Point( param.w, param.h),
          Scalar( 224 ,238 ,224 ),
          -1,
          8 );
-    line( gImgShow, Point( 0, 14*h/15 ), Point( w, 14*h/15 ) , Scalar( 0, 0, 0 ),2,8);
-    line( gImgShow, Point( w/4, 13*h/15 ), Point( w/4, h ) , Scalar( 0, 0, 0 ),2,8);
-    line( gImgShow, Point( w/2, 13*h/15 ), Point( w/2, h ) , Scalar( 0, 0, 0 ),2,8);
-    line( gImgShow, Point( 3*w/4, 13*h/15 ), Point( 3*w/4, h ) , Scalar( 0, 0, 0 ),2,8);
-    putText(gImgShow, "request control", Point(0+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
-    putText(gImgShow, "take off", Point(w/4+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
-    putText(gImgShow, "visual tracking", Point(w/2+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
-    putText(gImgShow, "release control", Point(3*w/4+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+    line( gImgShow, Point( 0, 14*param.h/15 ), Point( param.w, 14*param.h/15 ) , Scalar( 0, 0, 0 ),2,8);
+    line( gImgShow, Point( param.w/4, 13*param.h/15 ), Point( param.w/4, param.h ) , Scalar( 0, 0, 0 ),2,8);
+    line( gImgShow, Point( param.w/2, 13*param.h/15 ), Point( param.w/2, param.h ) , Scalar( 0, 0, 0 ),2,8);
+    line( gImgShow, Point( 3*param.w/4, 13*param.h/15 ), Point( 3*param.w/4, param.h ) , Scalar( 0, 0, 0 ),2,8);
+    putText(gImgShow, "request control", Point(0+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+    putText(gImgShow, "take off", Point(param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+    putText(gImgShow, "visual tracking", Point(param.w/2+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+    putText(gImgShow, "release control", Point(3*param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
 }
 
 
@@ -127,28 +127,25 @@ void switchColor(int val)
 {
     switch(val)
     {
-//    case 0:
-//        cavansInit();
-//        break;
     case 1:
         /* request control ability*/
-        rectangle( gImgShow, Point( 5, 13*h/15+5 ), Point(w/4-5, 14*h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
-        putText(gImgShow, "request control", Point(0+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+        rectangle( gImgShow, Point( 5, 13*param.h/15+5 ), Point(param.w/4-5, 14*param.h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
+        putText(gImgShow, "request control", Point(0+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
         break;
     case 2:
         /* take off */
-        rectangle( gImgShow, Point( w/4+5, 13*h/15+5 ), Point(w/2-5, 14*h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
-        putText(gImgShow, "take off", Point(w/4+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+        rectangle( gImgShow, Point( param.w/4+5, 13*param.h/15+5 ), Point(param.w/2-5, 14*param.h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
+        putText(gImgShow, "take off", Point(param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
         break;
     case 3:
         /* vision tracking mission */
-        rectangle( gImgShow, Point( w/2+5, 13*h/15+5 ), Point(3*w/4-5, 14*h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
-        putText(gImgShow, "visual tracking", Point(w/2+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+        rectangle( gImgShow, Point( param.w/2+5, 13*param.h/15+5 ), Point(3*param.w/4-5, 14*param.h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
+        putText(gImgShow, "visual tracking", Point(param.w/2+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
         break;
     case 4:
         /* release control ability*/
-        rectangle( gImgShow, Point( 3*w/4+5, 13*h/15+5 ), Point(w-5, 14*h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
-        putText(gImgShow, "release control", Point(3*w/4+10,13*h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+        rectangle( gImgShow, Point( 3*param.w/4+5, 13*param.h/15+5 ), Point(param.w-5, 14*param.h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
+        putText(gImgShow, "release control", Point(3*param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
         break;
     default:
         break;
@@ -161,29 +158,29 @@ void OnMouseAction(int event,int x,int y,int flags,void *ustc)
 
     if(event==CV_EVENT_LBUTTONDOWN) //left button down
     {
-        if(y>13*h/15 && y <14*h/15)
+        if(y>13*param.h/15 && y <14*param.h/15)
         {
-            switch(x/150)
+            switch(x/(param.h/4))
             {
             case 0:
                 /* request control ability*/
-                main_operate_code = 1;
-                buttonColor = 1;
+                uavStatus.ui_order = 1;
+                uavStatus.btn_color = 1;
                 break;
             case 1:
                 /* take off */
-                main_operate_code = 2;
-                buttonColor = 2;
+                uavStatus.ui_order = 2;
+                uavStatus.btn_color = 2;
                 break;
             case 2:
                 /* vision tracking mission */
-                main_operate_code = 3;
-                buttonColor = 3;
+                uavStatus.ui_order = 3;
+                uavStatus.btn_color = 3;
                 break;
             case 3:
                 /* release control ability*/
-                main_operate_code = 4;
-                buttonColor = 4;
+                uavStatus.ui_order = 4;
+                uavStatus.btn_color = 4;
                 break;
             default:
                 break;
@@ -195,9 +192,7 @@ void OnMouseAction(int event,int x,int y,int flags,void *ustc)
     }
     if(event==CV_EVENT_LBUTTONUP)   //left button up
     {
-        switchColor(buttonColor);
-//        imshow(winName, gImgShow);
-//        cv::waitKey(1);
+        switchColor(uavStatus.btn_color);
     }
 }
 
@@ -224,71 +219,75 @@ void img_Callback(const sensor_msgs::ImageConstPtr& msg)
 {
     /************************** get image data **************************/
     grabImg(msg);
-    Size size(640,512);//the dst image size,e.g.100x100//1280x1024
-    resize(gImg,gImg,size);//resize image
+    resize(gImg,gImg,Size(640,512));//resize image
     gImg.copyTo(gImgShow(Rect(0,0,640,512)));
-//    imshow(winName, gImgShow);
-//    cv::waitKey(5);
-
 }
 
 void imShowSlot()
 {
-   // switchColor(main_operate_code);
     imshow(winName, gImgShow);
     cv::waitKey(1);
 }
 
 int main(int argc, char** argv)
 {
-    namedWindow(winName, CV_WINDOW_AUTOSIZE);
+    namedWindow(winName, CV_WINDOW_AUTOSIZE);    //image show window
+
+    /*************************** ros init ***********************************/
     ros::init(argc, argv, "uav_node");
-    if(argc!=1)
-    {
-        cerr<<endl<<"Usage: rosrun uav uav_node";
-        ros::shutdown();
-        return 1;
-    }
     ros::NodeHandle nh;
+    ros::Subscriber sub = nh.subscribe("/qrcodePose", 1, vPosCallback);     //subscribe position msg
+    image_transport::ImageTransport it(nh);
+    image_transport::Subscriber subImg = it.subscribe("/qrDetectImg", 1, img_Callback);     //subscribe image msg
+    //ros::Rate loop_rate(50);
+
+    /*************************** m100 init ***********************************/
     DJIDrone* drone = new DJIDrone(nh);
-    ros::Subscriber sub = nh.subscribe("/qrcodePose", 1, vPosCallback);
-    image_transport::ImageTransport iT(nh);
-    image_transport::Subscriber subImg = iT.subscribe("/qrDetectImg", 1, img_Callback);
-    
-    ros::Publisher pubCtrlParam = nh.advertise<geometry_msgs::Pose> ("/ctrlPose", 1);
 
     /*************************** dynamic_reconfigure ***********************************/
     dynamic_reconfigure::Server<uav::CtrlParamConfig> server;
     dynamic_reconfigure::Server<uav::CtrlParamConfig>::CallbackType f;
     f = boost::bind(&Callback, _1, _2);
     server.setCallback(f);
+
+    /*************************** OpenCV UI init ***********************************/
     cavansInit();
     setMouseCallback(winName,OnMouseAction);
-    //ros::Rate loop_rate(50);
+
+    /*************************** main loop: check ui order ***********************************/
     while(ros::ok())
     {
         ros::spinOnce();
         imShowSlot();
-        switch(main_operate_code)
+
+        switch(uavStatus.ui_order)
         {
             case 1:
                 /* request control ability*/
                 cout<<"request control ability"<<endl<<endl;
                 drone->request_sdk_permission_control();
-
                 break;
             case 2:
                 /* take off */
-                drone->takeoff();
                 cout<<"take off "<<endl<<endl;
+                drone->takeoff();
                 break;
             case 3:
-//                cout<<"visual tracking"<<endl<<endl;
-                drone->attitude_control(0x02, param.scaleX*visionPos_.orientation.x,
-                                               param.scaleY*visionPos_.orientation.y,
-                                               param.scaleZ*(0.8+visionPos_.position.z ),
-                                               /*0*/param.scaleYaw*visionPos_.orientation.z);
-                usleep(20000);//50Hz
+                /*cout<<"visual tracking"<<endl<<endl;*/
+                if(uavStatus.target_lost == 0)
+                {
+                    drone->attitude_control(0x02, param.scaleX*visionPos_.orientation.x,
+                                                   param.scaleY*visionPos_.orientation.y,
+                                                   param.scaleZ*(0.8+visionPos_.position.z ),
+                                                   /*0*/param.scaleYaw*visionPos_.orientation.z);
+                    usleep(20000);  //50Hz
+                }
+                else if (uavStatus.target_lost == 1)
+                {
+                    drone->attitude_control(0x02, 0, 0, 0, 0);
+                    usleep(20000);  //50Hz
+                }
+
                 break;
             case 4:
                 /* release control ability*/
@@ -298,12 +297,11 @@ int main(int argc, char** argv)
             default:
                 break;
         }
-        if(main_operate_code !=3 )
+        if(uavStatus.ui_order !=3 )
         {
-            main_operate_code = 0;
+            uavStatus.ui_order = 0;
         }
         //loop_rate.sleep();
-
     }
     return 0;
 }
