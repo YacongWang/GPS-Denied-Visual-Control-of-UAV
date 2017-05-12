@@ -78,19 +78,24 @@ void vPosCallback(const geometry_msgs::PoseArray& msg)
 {
     if(!msg.poses.empty())
     {
-        if (uavStatus.target_lost_cnt >= 5 && uavStatus.target_lost == 0)
+        if (uavStatus.target_lost_cnt >= 5 /*&& uavStatus.target_lost == 0*/)
         {
+            uavStatus.ui_order = 4;
             uavStatus.target_lost = 1;
             uavStatus.target_lost_cnt = 0;
             return;
         }
         if(msg.poses[0].position.x == -100 && msg.poses[0].position.y == -100 && msg.poses[0].position.z == -100)
         {
+//            cout<<"uavStatus.target_lost_cnt:"<<uavStatus.target_lost_cnt<<endl;
             uavStatus.target_lost_cnt += 1;
             return;
         }
 
-        uavStatus.target_lost == 0;
+        if (uavStatus.btn_color == 3 && uavStatus.ui_order == 4)
+            uavStatus.ui_order = 3;
+
+
         visionPos_.position.x  = msg.poses[0].position.x;
         visionPos_.position.y  = -msg.poses[0].position.y;
         visionPos_.position.z  = msg.poses[0].position.z;
@@ -119,7 +124,9 @@ void cavansInit()
     putText(gImgShow, "request control", Point(0+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
     putText(gImgShow, "take off", Point(param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
     putText(gImgShow, "visual tracking", Point(param.w/2+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
-    putText(gImgShow, "release control", Point(3*param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+    putText(gImgShow, "hovering", Point(3*param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+    putText(gImgShow, "release control", Point(0+10,14*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+    putText(gImgShow, "landing", Point(param.w/4+10,14*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
 }
 
 
@@ -143,9 +150,19 @@ void switchColor(int val)
         putText(gImgShow, "visual tracking", Point(param.w/2+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
         break;
     case 4:
-        /* release control ability*/
+        /* hovering*/
         rectangle( gImgShow, Point( 3*param.w/4+5, 13*param.h/15+5 ), Point(param.w-5, 14*param.h/15-5), Scalar( 0, 255, 255 ), -1, 8 );
-        putText(gImgShow, "release control", Point(3*param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+        putText(gImgShow, "hovering", Point(3*param.w/4+10,13*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+        break;
+    case 5:
+        /* release control ability*/
+        rectangle( gImgShow, Point( 5, 14*param.h/15+5 ), Point(param.w/4-5, param.h-5), Scalar( 0, 255, 255 ), -1, 8 );
+        putText(gImgShow, "release control", Point(10,14*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
+        break;
+    case 6:
+        /* landing*/
+        rectangle( gImgShow, Point( param.w/4+5, 14*param.h/15+5 ), Point(param.w/2-5, param.h-5), Scalar( 0, 255, 255 ), -1, 8 );
+        putText(gImgShow, "landing", Point(param.w/4+10,14*param.h/15+20), cv::FONT_HERSHEY_DUPLEX, 0.6, Scalar(0,0,0), 1);
         break;
     default:
         break;
@@ -178,7 +195,7 @@ void OnMouseAction(int event,int x,int y,int flags,void *ustc)
                 uavStatus.btn_color = 3;
                 break;
             case 3:
-                /* release control ability*/
+                /* hovering*/
                 uavStatus.ui_order = 4;
                 uavStatus.btn_color = 4;
                 break;
@@ -186,10 +203,28 @@ void OnMouseAction(int event,int x,int y,int flags,void *ustc)
                 break;
 
             }
-
         }
+        if(y>14*param.h/15 && y <param.h)
+        {
+            switch(x/(param.h/4))
+            {
+            case 0:
+                /* release control request */
+                uavStatus.ui_order = 5;
+                uavStatus.btn_color = 5;
+                break;
+            case 1:
+                /* landing*/
+                uavStatus.ui_order = 6;
+                uavStatus.btn_color = 6;
+                break;
+            default:
+                break;
 
+            }
+        }
     }
+
     if(event==CV_EVENT_LBUTTONUP)   //left button up
     {
         switchColor(uavStatus.btn_color);
@@ -274,33 +309,41 @@ int main(int argc, char** argv)
                 break;
             case 3:
                 /*cout<<"visual tracking"<<endl<<endl;*/
-                if(uavStatus.target_lost == 0)
-                {
-                    drone->attitude_control(0x02, param.scaleX*visionPos_.orientation.x,
-                                                   param.scaleY*visionPos_.orientation.y,
-                                                   param.scaleZ*(0.8+visionPos_.position.z ),
-                                                   /*0*/param.scaleYaw*visionPos_.orientation.z);
-                    usleep(20000);  //50Hz
-                }
-                else if (uavStatus.target_lost == 1)
-                {
-                    drone->attitude_control(0x02, 0, 0, 0, 0);
-                    usleep(20000);  //50Hz
-                }
-
+                drone->attitude_control(0x02, param.scaleX*visionPos_.orientation.x,
+                                               param.scaleY*visionPos_.orientation.y,
+                                               param.scaleZ*(0.8+visionPos_.position.z ),
+                                               param.scaleYaw*visionPos_.orientation.z);
+                usleep(20000);  //50Hz
                 break;
             case 4:
+                /*hovering*/
+                drone->attitude_control(0x02, 0, 0, 0, 0);
+                usleep(20000);  //50Hz
+                break;
+            case 5:
                 /* release control ability*/
                 cout<<"release control ability"<<endl<<endl;
                 drone->release_sdk_permission_control();
                 break;
+            case 6:
+                /*landing*/
+                drone->attitude_control(0x02, param.scaleX*visionPos_.orientation.x,
+                                               param.scaleY*visionPos_.orientation.y,
+                                               param.scaleZ*(0.2+visionPos_.position.z ),
+                                               param.scaleYaw*visionPos_.orientation.z);
+                usleep(20000);  //50Hz
+                if (abs(visionPos_.position.z)<=0.2)
+                    drone->drone_disarm();
+                break;
             default:
                 break;
         }
-        if(uavStatus.ui_order !=3 )
+//        cout << "uavStatus.ui_order"<<uavStatus.ui_order << endl;
+        if(uavStatus.ui_order ==1 || uavStatus.ui_order ==2 || uavStatus.ui_order ==5 )
         {
             uavStatus.ui_order = 0;
         }
+
         //loop_rate.sleep();
     }
     return 0;
