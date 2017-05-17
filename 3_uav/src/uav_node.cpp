@@ -6,7 +6,7 @@
 #include "geometry_msgs/Pose.h"
 #include "uav/CtrlParamConfig.h"
 #include <dynamic_reconfigure/server.h>
-#include <uav/CtrlParamConfig.h>
+//#include <uav/CtrlParamConfig.h>
 #include <image_transport/image_transport.h>
 //!opencv
 #include <opencv2/core/core.hpp>
@@ -254,8 +254,10 @@ void img_Callback(const sensor_msgs::ImageConstPtr& msg)
 {
     /************************** get image data **************************/
     grabImg(msg);
-    resize(gImg,gImg,Size(640,512));//resize image
-    gImg.copyTo(gImgShow(Rect(0,0,640,512)));
+//    resize(gImg,gImg,Size(640,512));//resize image
+//    gImg.copyTo(gImgShow(Rect(0,0,640,512)));
+    resize(gImg,gImg,Size(320,256));//resize image
+    gImg.copyTo(gImgShow(Rect(0,0,320,256)));
 }
 
 void imShowSlot()
@@ -311,7 +313,7 @@ int main(int argc, char** argv)
                 /*cout<<"visual tracking"<<endl<<endl;*/
                 drone->attitude_control(0x02, param.scaleX*visionPos_.orientation.x,
                                                param.scaleY*visionPos_.orientation.y,
-                                               param.scaleZ*(0.8+visionPos_.position.z ),
+                                               param.scaleZ*(1.3+visionPos_.position.z ),
                                                param.scaleYaw*visionPos_.orientation.z);
                 usleep(20000);  //50Hz
                 break;
@@ -332,7 +334,7 @@ int main(int argc, char** argv)
                                                param.scaleZ*(0.2+visionPos_.position.z ),
                                                param.scaleYaw*visionPos_.orientation.z);
                 usleep(20000);  //50Hz
-                if (abs(visionPos_.position.z)<=0.2)
+                if (abs(visionPos_.position.z)<=0.3)
                     drone->drone_disarm();
                 break;
             default:

@@ -4,8 +4,8 @@ MarkerDetector::MarkerDetector(void)
 {
     m_minContourLengthAllowed =  (1280/30)*(1280/30);
 
-    m_camMat = (Mat_<float>(3,3) << 818.4754131157803, 0, 642.2226934323369, 0, 820.4894345503285, 468.6612502070024, 0, 0, 1);
-    m_distCoeff = (Mat_<float>(4,1) << -0.3925087711797847, 0.1351436575960125, -0.001523285367454869, -0.001720442844741013);
+    m_camMat = (Mat_<float>(3,3) << 821.2410994575886, 0, 625.99968219912, 0, 821.7898768681363, 550.0816455568536, 0, 0, 1);
+    m_distCoeff = (Mat_<float>(4,1) << -0.3825953832601323, 0.1235599739171818, 0.001622854074170397, -0.001346534040732708);
 
 	m_markerSize = Size(100, 100);
 	// 默认marker的size为100*100,markercorner在2d空间为100*100的矩形
@@ -25,14 +25,16 @@ MarkerDetector::MarkerDetector(void)
     m_markerCorners3d.push_back(cv::Point3f(markerlenthP,markerlenthN,0));
     m_markerCorners3d.push_back(cv::Point3f(markerlenthP,markerlenthP,0));
     m_markerCorners3d.push_back(cv::Point3f(markerlenthN,markerlenthP,0));
+//    m_thresh = 100;
 }
 
 MarkerDetector::~MarkerDetector(void)
 {
 }
 
-void MarkerDetector::processFrame(const Mat& _frame)
+void MarkerDetector::processFrame(const Mat& _frame ,double imgThresh)
 {
+    m_thresh = imgThresh;
 	m_markers.clear();
 	findMarkers(_frame, m_markers);
 }
@@ -46,8 +48,9 @@ bool MarkerDetector::findMarkers(const Mat& _frame, vector<Marker>& _detectedMar
 	// 转为灰度图
 	//cvtColor(_frame, m_imgGray, CV_BGR2GRAY);
 
-	// 转为2值图,自适应的阈值,这个自适应阈值函数好像有问题啊。。。。！！！！！！
-    threshold(_frame, m_imgThreshold, 100, 255, cv::THRESH_BINARY_INV);
+    // 转为2值图,自适应的阈值
+
+    threshold(_frame, m_imgThreshold, m_thresh, 255, cv::THRESH_BINARY_INV);
 //    imshow("threshold", m_imgThreshold);
 //    adaptiveThreshold(m_imgGray, m_imgThreshold, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 7, 7);
 //    imshow("threshold", m_imgThreshold);

@@ -1,5 +1,5 @@
 #include "qrcodeDetectMain.h"
-using namespace qrcodeDdetect;
+using namespace qrcodeDetect;
 using namespace std;
 using namespace cv;
 #define CAMERAEXTRINSICMAT "CameraExtrinsicMat"
@@ -7,7 +7,7 @@ using namespace cv;
 #define DISTCOEFF "DistCoeff"
 #define IMAGESIZE "ImageSize"
 
-QrcodeDdetect::QrcodeDdetect(ros::NodeHandle nodehandle, image_transport::ImageTransport it)
+QrcodeDetect::QrcodeDetect(ros::NodeHandle nodehandle, image_transport::ImageTransport it)
     : nodehandle_(nodehandle),
       it_(it),
       imgMsg_(new sensor_msgs::Image),
@@ -20,22 +20,22 @@ QrcodeDdetect::QrcodeDdetect(ros::NodeHandle nodehandle, image_transport::ImageT
     toDegree = 180/3.14159;
 }
 
-void QrcodeDdetect::readParameters()
+void QrcodeDetect::readParameters()
 {
     //readCalibPara(calibFile_.c_str());
     nodehandle_.param("strSub_img",    strSub_img_,     string("/camera/image_color"));
 }
-void QrcodeDdetect::cfgCallback(const Parameter cfg)
+void QrcodeDetect::cfgCallback(const Parameter cfg)
 {
     cfg_ = cfg;
 }
-void QrcodeDdetect::img_Callback(const sensor_msgs::ImageConstPtr& img)
+void QrcodeDetect::img_Callback(const sensor_msgs::ImageConstPtr& img)
 {
     /************************** get image data **************************/
     grabImg(img);
 //    Size size(340,240);//the dst image size,e.g.100x100
 //    resize(img_,img_,size);//resize image
-    markCapture_.processFrame(img_);
+    markCapture_.processFrame(img_,cfg_.thresh);
     pc2Time_ = img->header.stamp;
     cvtColor(img_, cImg_, CV_GRAY2RGB);
     poseArrayMsg_->poses.clear();
@@ -71,12 +71,13 @@ void QrcodeDdetect::img_Callback(const sensor_msgs::ImageConstPtr& img)
             markerPose_.orientation.x,markerPose_.orientation.y,markerPose_.orientation.z);
     putText(cImg_, bufTran, Point(20,img_.rows - 80), cv::FONT_HERSHEY_DUPLEX, 1.5, Scalar(255,0,0), 2);
     putText(cImg_, bufRot, Point(20,img_.rows - 20), cv::FONT_HERSHEY_DUPLEX, 1.5, Scalar(255,0,0), 2);
+    resize(cImg_,ImgPub_,Size(320,256));//resize image
     publishMsg();
     //imageCloudPoints_<< imgPoint_.x <<" "<<imgPoint_.y<<endl;
 
 }
 
-void QrcodeDdetect::grabImg(const sensor_msgs::ImageConstPtr& img)
+void QrcodeDetect::grabImg(const sensor_msgs::ImageConstPtr& img)
 {
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptr;
@@ -93,7 +94,7 @@ void QrcodeDdetect::grabImg(const sensor_msgs::ImageConstPtr& img)
         //Here we get the cv::Mat message ,that is cv_ptr->image
       cv_ptr->image.copyTo(img_);
 }
-void QrcodeDdetect::addpose(Vec3f eulerAngle , Vec3f tran)
+void QrcodeDetect::addpose(Vec3f eulerAngle , Vec3f tran)
 {
 
       markerPose_.position.x = tran[1];
@@ -108,7 +109,7 @@ void QrcodeDdetect::addpose(Vec3f eulerAngle , Vec3f tran)
       poseArrayMsg_->poses.push_back(markerPose_);
 }
 
-void QrcodeDdetect::publishMsg()
+void QrcodeDetect::publishMsg()
 {
     //publish pose
     poseArrayMsg_->header.frame_id = "camera";
@@ -116,11 +117,11 @@ void QrcodeDdetect::publishMsg()
     pubMarkerPoses_.publish(poseArrayMsg_);
 
     //publish image
-    imgMsg_ = cv_bridge::CvImage(poseArrayMsg_->header, "bgr8", cImg_).toImageMsg();
+    imgMsg_ = cv_bridge::CvImage(poseArrayMsg_->header, "bgr8", ImgPub_).toImageMsg();
     pubImg_.publish(imgMsg_);
     cv::waitKey(1);
 }
-//int QrcodeDdetect::readCalibPara(string filename)
+//int QrcodeDetect::readCalibPara(string filename)
 //{
 //    cv::FileStorage fs(filename,cv::FileStorage::READ);
 //    if(!fs.isOpened())

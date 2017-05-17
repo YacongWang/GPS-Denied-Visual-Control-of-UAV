@@ -1,0 +1,8 @@
+<!-- -->
+<launch>
+    <include file="$(find flea3)/launch/single_node.launch" />
+    <!--node pkg="image_view" type="image_view" name="viewer" args="image:=/pg_15508342/image_raw" output="screen"></node-->
+    <node pkg="camera_calibration" type="cameracalibrator.py" name="mono_calibration"
+    args="--size 6x8 --square 0.028 image:=/pg_15508342/image_raw camera:=/pg_15508342"></node>
+
+</launch>

@@ -23,26 +23,21 @@ using namespace cv;
  */
 struct Parameter
 {
-    double x_min;
-    double x_max;
-    double y_min;
-    double y_max;
-    double z_min;
-    double z_max;
+    double thresh;
 };
-namespace qrcodeDdetect {
+namespace qrcodeDetect {
 
-class QrcodeDdetect
+class QrcodeDetect
 {
 public:
     /*!
      * Constructor.
      */
-    QrcodeDdetect (ros::NodeHandle nodehandle, image_transport::ImageTransport it);
+    QrcodeDetect (ros::NodeHandle nodehandle, image_transport::ImageTransport it);
     /*!
      * Deconstructor.
      */
-    virtual ~QrcodeDdetect () {}
+    virtual ~QrcodeDetect () {}
     /*!
      * imagetopic callback function using message filter
      */
@@ -101,6 +96,7 @@ private:
     cv::Mat distCoeff_;             //camera distortion parameter
     cv::Size imageSize_;            //image size
     cv::Mat cImg_;
+    cv::Mat ImgPub_;
     //!read and write param file
     string calibFile_;              //cameta laser calibration file
     image_transport::ImageTransport it_;

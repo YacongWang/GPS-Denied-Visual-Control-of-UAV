@@ -1,6 +1,6 @@
 <!-- -->
 <launch>
-    <node pkg="rosbag" type="play" name="player"  args="--clock -l /home/m100/soft/dev/cpp-dev/ros-catkin-dev/src/record_bag/2017-05-09-15-26-41.bag"/>
+    <node pkg="rosbag" type="play" name="player"  args="--clock -l /home/m100/soft/dev/cpp-dev/ros-catkin-dev/src/record_bag/error_detect2(error_big_marker).bag"/>
     <include file="$(find qrcode_detect)/launch/qrcode_detect.launch" />
     <node pkg="image_view" type="image_view" name="viewer" args="image:=/qrDetectImg"></node>
 
